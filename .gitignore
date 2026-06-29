@@ -1,0 +1,27 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# Backend
+ivoneide-pintura-api/target/
+ivoneide-pintura-api/.classpath
+ivoneide-pintura-api/.project
+ivoneide-pintura-api/.settings/
+ivoneide-pintura-api/.apt_generated/
+ivoneide-pintura-api/.factorypath
+ivoneide-pintura-api/.springBeans
+ivoneide-pintura-api/.sts4-cache/
+ivoneide-pintura-api/.idea/
+ivoneide-pintura-api/*.iws
+ivoneide-pintura-api/*.iml
+ivoneide-pintura-api/*.ipr
+ivoneide-pintura-api/.vscode/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+
+# Local assistant/workspace metadata
+.agents/
