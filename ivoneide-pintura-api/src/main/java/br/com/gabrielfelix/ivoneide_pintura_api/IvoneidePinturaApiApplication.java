@@ -9,5 +9,4 @@ public class IvoneidePinturaApiApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(IvoneidePinturaApiApplication.class, args);
 	}
-
 }

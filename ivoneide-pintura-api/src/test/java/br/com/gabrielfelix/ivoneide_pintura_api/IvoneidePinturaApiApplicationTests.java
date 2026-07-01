@@ -9,5 +9,4 @@ class IvoneidePinturaApiApplicationTests {
 	@Test
 	void contextLoads() {
 	}
-
 }
