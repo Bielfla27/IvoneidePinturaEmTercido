@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import br.com.gabrielfelix.ivoneide_pintura_api.product.ProductNotFoundException;
+import br.com.gabrielfelix.ivoneide_pintura_api.user.UserEmailAlreadyExistsException;
+import br.com.gabrielfelix.ivoneide_pintura_api.user.UserNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -37,5 +39,25 @@ public class GlobalExceptionHandler {
 				List.of(exception.getMessage()));
 
 		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
+	}
+
+	@ExceptionHandler(UserNotFoundException.class)
+	public ResponseEntity<ApiError> handleUserNotFound(UserNotFoundException exception) {
+		ApiError apiError = new ApiError(
+				HttpStatus.NOT_FOUND.value(),
+				exception.getMessage(),
+				List.of(exception.getMessage()));
+
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
+	}
+
+	@ExceptionHandler(UserEmailAlreadyExistsException.class)
+	public ResponseEntity<ApiError> handleUserEmailAlreadyExists(UserEmailAlreadyExistsException exception) {
+		ApiError apiError = new ApiError(
+				HttpStatus.CONFLICT.value(),
+				exception.getMessage(),
+				List.of(exception.getMessage()));
+
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
 	}
 }
