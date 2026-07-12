@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserRequest;
+import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserCreateRequest;
 import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserResponse;
 import jakarta.validation.Valid;
 
@@ -26,7 +26,7 @@ public class UserController {
 	}
 
 	@PostMapping
-	public ResponseEntity<UserResponse> create(@Valid @RequestBody UserRequest request) {
+	public ResponseEntity<UserResponse> create(@Valid @RequestBody UserCreateRequest request) {
 		User user = userService.create(request);
 		return ResponseEntity
 				.created(URI.create("/api/usuarios/" + user.getId()))

@@ -1,11 +1,10 @@
 package br.com.gabrielfelix.ivoneide_pintura_api.user.dto;
 
-import br.com.gabrielfelix.ivoneide_pintura_api.user.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public class UserRequest {
+public class UserCreateRequest {
 
 	@NotBlank(message = "O nome do usuario e obrigatorio.")
 	@Size(max = 120, message = "O nome deve ter no maximo 120 caracteres.")
@@ -19,8 +18,6 @@ public class UserRequest {
 	@NotBlank(message = "A senha do usuario e obrigatoria.")
 	@Size(min = 8, max = 72, message = "A senha deve ter entre 8 e 72 caracteres.")
 	private String senha;
-
-	private UserRole role = UserRole.USER;
 
 	private Boolean ativo = true;
 
@@ -46,14 +43,6 @@ public class UserRequest {
 
 	public void setSenha(String senha) {
 		this.senha = senha;
-	}
-
-	public UserRole getRole() {
-		return role;
-	}
-
-	public void setRole(UserRole role) {
-		this.role = role;
 	}
 
 	public Boolean getAtivo() {

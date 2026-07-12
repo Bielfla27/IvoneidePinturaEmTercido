@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserRequest;
+import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserCreateRequest;
 
 @Service
 public class UserService {
@@ -18,7 +18,7 @@ public class UserService {
 		this.passwordEncoder = passwordEncoder;
 	}
 
-	public User create(UserRequest request) {
+	public User create(UserCreateRequest request) {
 		String email = request.getEmail().trim().toLowerCase();
 
 		if (userRepository.existsByEmail(email)) {
@@ -29,7 +29,7 @@ public class UserService {
 				request.getNome(),
 				email,
 				passwordEncoder.encode(request.getSenha()),
-				request.getRole() == null ? UserRole.USER : request.getRole(),
+				UserRole.USER,
 				request.getAtivo() == null ? true : request.getAtivo());
 
 		return userRepository.save(user);
