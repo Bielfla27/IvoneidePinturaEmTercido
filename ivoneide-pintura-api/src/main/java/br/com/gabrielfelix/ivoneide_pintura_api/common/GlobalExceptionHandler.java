@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import br.com.gabrielfelix.ivoneide_pintura_api.auth.InvalidCredentialsException;
+import br.com.gabrielfelix.ivoneide_pintura_api.order.OrderBusinessException;
+import br.com.gabrielfelix.ivoneide_pintura_api.order.OrderNotFoundException;
 import br.com.gabrielfelix.ivoneide_pintura_api.product.ProductNotFoundException;
 import br.com.gabrielfelix.ivoneide_pintura_api.user.UserEmailAlreadyExistsException;
 import br.com.gabrielfelix.ivoneide_pintura_api.user.UserNotFoundException;
@@ -70,5 +72,25 @@ public class GlobalExceptionHandler {
 				List.of(exception.getMessage()));
 
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
+	}
+
+	@ExceptionHandler(OrderBusinessException.class)
+	public ResponseEntity<ApiError> handleOrderBusiness(OrderBusinessException exception) {
+		ApiError apiError = new ApiError(
+				HttpStatus.BAD_REQUEST.value(),
+				exception.getMessage(),
+				List.of(exception.getMessage()));
+
+		return ResponseEntity.badRequest().body(apiError);
+	}
+
+	@ExceptionHandler(OrderNotFoundException.class)
+	public ResponseEntity<ApiError> handleOrderNotFound(OrderNotFoundException exception) {
+		ApiError apiError = new ApiError(
+				HttpStatus.NOT_FOUND.value(),
+				exception.getMessage(),
+				List.of(exception.getMessage()));
+
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
 	}
 }
