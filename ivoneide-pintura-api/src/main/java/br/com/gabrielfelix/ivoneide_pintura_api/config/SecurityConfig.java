@@ -12,15 +12,23 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import br.com.gabrielfelix.ivoneide_pintura_api.security.JwtAuthenticationFilter;
+import br.com.gabrielfelix.ivoneide_pintura_api.security.RestAccessDeniedHandler;
+import br.com.gabrielfelix.ivoneide_pintura_api.security.RestAuthenticationEntryPoint;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+	private final RestAccessDeniedHandler restAccessDeniedHandler;
 
-	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+			RestAuthenticationEntryPoint restAuthenticationEntryPoint,
+			RestAccessDeniedHandler restAccessDeniedHandler) {
 		this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+		this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
+		this.restAccessDeniedHandler = restAccessDeniedHandler;
 	}
 
 	@Bean
@@ -28,10 +36,14 @@ public class SecurityConfig {
 		return http
 				.csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.exceptionHandling(exception -> exception
+						.authenticationEntryPoint(restAuthenticationEntryPoint)
+						.accessDeniedHandler(restAccessDeniedHandler))
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/produtos", "/api/produtos/ativos", "/api/produtos/*").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/usuarios/me").authenticated()
 						.requestMatchers(HttpMethod.POST, "/api/produtos").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.PUT, "/api/produtos/*").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.DELETE, "/api/produtos/*").hasRole("ADMIN")

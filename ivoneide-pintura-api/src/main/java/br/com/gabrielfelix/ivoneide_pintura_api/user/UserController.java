@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,6 +42,12 @@ public class UserController {
 				.toList();
 
 		return ResponseEntity.ok(users);
+	}
+
+	@GetMapping("/me")
+	public ResponseEntity<UserResponse> findAuthenticatedUser(Authentication authentication) {
+		User user = userService.findByEmail(authentication.getName());
+		return ResponseEntity.ok(new UserResponse(user));
 	}
 
 	@GetMapping("/{id}")
