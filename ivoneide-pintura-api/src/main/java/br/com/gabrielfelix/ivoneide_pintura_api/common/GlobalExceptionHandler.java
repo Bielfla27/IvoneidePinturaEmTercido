@@ -8,6 +8,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import br.com.gabrielfelix.ivoneide_pintura_api.auth.InvalidCredentialsException;
 import br.com.gabrielfelix.ivoneide_pintura_api.product.ProductNotFoundException;
 import br.com.gabrielfelix.ivoneide_pintura_api.user.UserEmailAlreadyExistsException;
 import br.com.gabrielfelix.ivoneide_pintura_api.user.UserNotFoundException;
@@ -59,5 +60,15 @@ public class GlobalExceptionHandler {
 				List.of(exception.getMessage()));
 
 		return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
+	}
+
+	@ExceptionHandler(InvalidCredentialsException.class)
+	public ResponseEntity<ApiError> handleInvalidCredentials(InvalidCredentialsException exception) {
+		ApiError apiError = new ApiError(
+				HttpStatus.UNAUTHORIZED.value(),
+				exception.getMessage(),
+				List.of(exception.getMessage()));
+
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
 	}
 }
