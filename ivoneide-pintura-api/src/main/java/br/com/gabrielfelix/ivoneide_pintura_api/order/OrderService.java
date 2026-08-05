@@ -7,7 +7,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderCreateRequest;
+import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderDownloadResponse;
 import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderItemRequest;
+import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderReceiptResponse;
 import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderResponse;
 import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderStatusUpdateRequest;
 import br.com.gabrielfelix.ivoneide_pintura_api.product.Product;
@@ -66,13 +68,7 @@ public class OrderService {
 
 	@Transactional(readOnly = true)
 	public OrderResponse findById(Long id, String userEmail) {
-		User usuario = userService.findByEmail(userEmail);
-		Order order = usuario.getRole() == UserRole.ADMIN
-				? findOrderById(id)
-				: orderRepository.findByIdAndUsuario(id, usuario)
-						.orElseThrow(() -> new OrderNotFoundException(id));
-
-		return new OrderResponse(order);
+		return new OrderResponse(findOrderByIdForUser(id, userEmail));
 	}
 
 	@Transactional(readOnly = true)
@@ -91,8 +87,56 @@ public class OrderService {
 		return new OrderResponse(orderRepository.save(order));
 	}
 
+	@Transactional(readOnly = true)
+	public List<OrderResponse> findMyPurchaseHistory(String userEmail) {
+		User usuario = userService.findByEmail(userEmail);
+
+		return orderRepository.findByUsuarioAndStatusOrderByCriadoEmDesc(usuario, OrderStatus.PAGO)
+				.stream()
+				.map(OrderResponse::new)
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public OrderReceiptResponse findReceipt(Long id, String userEmail) {
+		Order order = findPaidOrderByIdForUser(id, userEmail);
+
+		return new OrderReceiptResponse(order);
+	}
+
+	@Transactional(readOnly = true)
+	public List<OrderDownloadResponse> findDownloads(Long id, String userEmail) {
+		Order order = findPaidOrderByIdForUser(id, userEmail);
+
+		return order.getItens()
+				.stream()
+				.map(OrderDownloadResponse::new)
+				.toList();
+	}
+
 	private Order findOrderById(Long id) {
 		return orderRepository.findById(id)
 				.orElseThrow(() -> new OrderNotFoundException(id));
+	}
+
+	private Order findOrderByIdForUser(Long id, String userEmail) {
+		User usuario = userService.findByEmail(userEmail);
+
+		if (usuario.getRole() == UserRole.ADMIN) {
+			return findOrderById(id);
+		}
+
+		return orderRepository.findByIdAndUsuario(id, usuario)
+				.orElseThrow(() -> new OrderNotFoundException(id));
+	}
+
+	private Order findPaidOrderByIdForUser(Long id, String userEmail) {
+		Order order = findOrderByIdForUser(id, userEmail);
+
+		if (order.getStatus() != OrderStatus.PAGO) {
+			throw new OrderBusinessException("Este pedido ainda nao esta pago.");
+		}
+
+		return order;
 	}
 }

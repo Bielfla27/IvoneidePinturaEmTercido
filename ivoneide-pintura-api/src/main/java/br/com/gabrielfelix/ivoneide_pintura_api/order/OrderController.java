@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderCreateRequest;
+import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderDownloadResponse;
+import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderReceiptResponse;
 import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderResponse;
 import br.com.gabrielfelix.ivoneide_pintura_api.order.dto.OrderStatusUpdateRequest;
 import jakarta.validation.Valid;
@@ -50,6 +52,17 @@ public class OrderController {
 	@GetMapping("/{id}")
 	public ResponseEntity<OrderResponse> findById(@PathVariable Long id, Authentication authentication) {
 		return ResponseEntity.ok(orderService.findById(id, authentication.getName()));
+	}
+
+	@GetMapping("/{id}/recibo")
+	public ResponseEntity<OrderReceiptResponse> findReceipt(@PathVariable Long id, Authentication authentication) {
+		return ResponseEntity.ok(orderService.findReceipt(id, authentication.getName()));
+	}
+
+	@GetMapping("/{id}/downloads")
+	public ResponseEntity<List<OrderDownloadResponse>> findDownloads(@PathVariable Long id,
+			Authentication authentication) {
+		return ResponseEntity.ok(orderService.findDownloads(id, authentication.getName()));
 	}
 
 	@PatchMapping("/{id}/status")

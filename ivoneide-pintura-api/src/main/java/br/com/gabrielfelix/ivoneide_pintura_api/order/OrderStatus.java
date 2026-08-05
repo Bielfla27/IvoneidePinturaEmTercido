@@ -4,5 +4,6 @@ public enum OrderStatus {
 	CRIADO,
 	AGUARDANDO_PAGAMENTO,
 	PAGO,
-	CANCELADO
+	CANCELADO,
+	EXPIRADO
 }
