@@ -35,3 +35,13 @@ export function fazerLogin(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export function criarPedido(token, payload) {
+  return request('/api/pedidos', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
