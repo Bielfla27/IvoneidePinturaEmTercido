@@ -1,12 +1,35 @@
-const API_BASE_URL = 'http://localhost:8080';
+export const API_BASE_URL = 'http://localhost:8080';
+
+function normalizeToken(token) {
+  return String(token ?? '')
+    .trim()
+    .replace(/^"+|"+$/g, '')
+    .replace(/^Bearer\s+/i, '')
+    .trim();
+}
+
+function authHeaders(token) {
+  const normalizedToken = normalizeToken(token);
+
+  if (!normalizedToken) {
+    return undefined;
+  }
+
+  return {
+    Authorization: `Bearer ${normalizedToken}`,
+  };
+}
 
 async function request(path, options = {}) {
+  const isFormData = options.body instanceof FormData;
+  const { headers, ...requestOptions } = options;
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...requestOptions,
     headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...headers,
     },
-    ...options,
   });
 
   const contentType = response.headers.get('content-type');
@@ -16,7 +39,10 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     const message = data?.mensagem || 'Nao foi possivel concluir a solicitacao.';
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    error.errors = data?.erros ?? [];
+    throw error;
   }
 
   return data;
@@ -39,9 +65,39 @@ export function fazerLogin(payload) {
 export function criarPedido(token, payload) {
   return request('/api/pedidos', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token),
     body: JSON.stringify(payload),
+  });
+}
+
+export function listarMeusPedidos(token) {
+  return request('/api/pedidos/meus', {
+    headers: authHeaders(token),
+  });
+}
+
+export function listarProdutosAtivos() {
+  return request('/api/produtos/ativos');
+}
+
+export function listarProdutos(token) {
+  return request('/api/produtos', {
+    headers: authHeaders(token),
+  });
+}
+
+export function criarProduto(token, payload) {
+  return request('/api/produtos', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: payload,
+  });
+}
+
+export function atualizarProduto(token, id, payload) {
+  return request(`/api/produtos/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: payload,
   });
 }

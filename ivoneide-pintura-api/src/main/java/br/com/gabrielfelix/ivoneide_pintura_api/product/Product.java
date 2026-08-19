@@ -41,6 +41,8 @@ public class Product {
 	@Column(length = 500)
 	private String urlImagemCapa;
 
+	private Integer quantidadePaginas;
+
 	@Column(nullable = false)
 	private Boolean ativo;
 
@@ -55,12 +57,18 @@ public class Product {
 
 	public Product(String nome, String descricao, BigDecimal preco, ProductType tipo, String urlPdf,
 			String urlImagemCapa, Boolean ativo) {
+		this(nome, descricao, preco, tipo, urlPdf, urlImagemCapa, null, ativo);
+	}
+
+	public Product(String nome, String descricao, BigDecimal preco, ProductType tipo, String urlPdf,
+			String urlImagemCapa, Integer quantidadePaginas, Boolean ativo) {
 		this.nome = nome;
 		this.descricao = descricao;
 		this.preco = preco;
 		this.tipo = tipo;
 		this.urlPdf = urlPdf;
 		this.urlImagemCapa = urlImagemCapa;
+		this.quantidadePaginas = quantidadePaginas;
 		this.ativo = ativo;
 	}
 
@@ -126,6 +134,14 @@ public class Product {
 
 	public void setUrlImagemCapa(String urlImagemCapa) {
 		this.urlImagemCapa = urlImagemCapa;
+	}
+
+	public Integer getQuantidadePaginas() {
+		return quantidadePaginas;
+	}
+
+	public void setQuantidadePaginas(Integer quantidadePaginas) {
+		this.quantidadePaginas = quantidadePaginas;
 	}
 
 	public Boolean getAtivo() {

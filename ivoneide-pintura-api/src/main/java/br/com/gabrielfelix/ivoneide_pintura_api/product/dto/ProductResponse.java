@@ -15,6 +15,7 @@ public class ProductResponse {
 	private ProductType tipo;
 	private String urlPdf;
 	private String urlImagemCapa;
+	private Integer quantidadePaginas;
 	private Boolean ativo;
 	private LocalDateTime criadoEm;
 	private LocalDateTime atualizadoEm;
@@ -27,6 +28,7 @@ public class ProductResponse {
 		this.tipo = product.getTipo();
 		this.urlPdf = product.getUrlPdf();
 		this.urlImagemCapa = product.getUrlImagemCapa();
+		this.quantidadePaginas = product.getQuantidadePaginas();
 		this.ativo = product.getAtivo();
 		this.criadoEm = product.getCriadoEm();
 		this.atualizadoEm = product.getAtualizadoEm();
@@ -58,6 +60,10 @@ public class ProductResponse {
 
 	public String getUrlImagemCapa() {
 		return urlImagemCapa;
+	}
+
+	public Integer getQuantidadePaginas() {
+		return quantidadePaginas;
 	}
 
 	public Boolean getAtivo() {

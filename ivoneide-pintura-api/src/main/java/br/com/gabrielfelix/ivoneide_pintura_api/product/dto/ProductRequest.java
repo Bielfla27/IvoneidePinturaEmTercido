@@ -32,6 +32,8 @@ public class ProductRequest {
 	@Size(max = 500, message = "O link da imagem deve ter no máximo 500 caracteres.")
 	private String urlImagemCapa;
 
+	private Integer quantidadePaginas;
+
 	private Boolean ativo = true;
 
 	public String getNome() {
@@ -80,6 +82,14 @@ public class ProductRequest {
 
 	public void setUrlImagemCapa(String urlImagemCapa) {
 		this.urlImagemCapa = urlImagemCapa;
+	}
+
+	public Integer getQuantidadePaginas() {
+		return quantidadePaginas;
+	}
+
+	public void setQuantidadePaginas(Integer quantidadePaginas) {
+		this.quantidadePaginas = quantidadePaginas;
 	}
 
 	public Boolean getAtivo() {

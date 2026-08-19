@@ -6,6 +6,7 @@ frontend/*.local
 
 # Backend
 ivoneide-pintura-api/target/
+ivoneide-pintura-api/uploads/
 ivoneide-pintura-api/.classpath
 ivoneide-pintura-api/.project
 ivoneide-pintura-api/.settings/
@@ -22,6 +23,7 @@ ivoneide-pintura-api/.vscode/
 # OS/editor
 .DS_Store
 Thumbs.db
+*.log
 
 # Local assistant/workspace metadata
 .agents/
