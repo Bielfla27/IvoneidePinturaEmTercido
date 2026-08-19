@@ -62,6 +62,20 @@ export function fazerLogin(payload) {
   });
 }
 
+export function solicitarRecuperacaoSenha(payload) {
+  return request('/api/auth/recuperar-senha', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function redefinirSenha(payload) {
+  return request('/api/auth/redefinir-senha', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function criarPedido(token, payload) {
   return request('/api/pedidos', {
     method: 'POST',
@@ -73,6 +87,20 @@ export function criarPedido(token, payload) {
 export function listarMeusPedidos(token) {
   return request('/api/pedidos/meus', {
     headers: authHeaders(token),
+  });
+}
+
+export function listarPedidosAdmin(token) {
+  return request('/api/pedidos', {
+    headers: authHeaders(token),
+  });
+}
+
+export function atualizarStatusPedido(token, id, status) {
+  return request(`/api/pedidos/${id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ status }),
   });
 }
 
@@ -112,5 +140,13 @@ export function atualizarProduto(token, id, payload) {
     method: 'PUT',
     headers: authHeaders(token),
     body: payload,
+  });
+}
+
+export function atualizarMeuPerfil(token, payload) {
+  return request('/api/usuarios/me', {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
   });
 }

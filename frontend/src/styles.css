@@ -361,6 +361,34 @@ h1 {
   opacity: 0.7;
 }
 
+.auth-link-button {
+  min-height: 38px;
+  border: 0;
+  background: transparent;
+  color: #9e3d52;
+  font-weight: 900;
+}
+
+.test-code-box {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #b7dec0;
+  border-radius: 8px;
+  background: #effaf1;
+  color: #245637;
+}
+
+.test-code-box span {
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.test-code-box strong {
+  font-size: 1.8rem;
+  letter-spacing: 0.16em;
+}
+
 .user-summary {
   display: grid;
   gap: 4px;
@@ -1745,6 +1773,61 @@ h1 {
   flex: 0 0 auto;
 }
 
+.admin-orders-list {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-order-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #e7e3dd;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(48, 59, 44, 0.06);
+}
+
+.admin-order-card__header {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(190px, auto);
+  gap: 18px;
+  align-items: center;
+}
+
+.admin-order-card__header p {
+  margin: 5px 0 0;
+  color: #71806e;
+}
+
+.admin-order-card__status {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.admin-order-card__status strong {
+  color: #0f6b39;
+  font-size: 1.1rem;
+}
+
+.admin-order-card label {
+  display: grid;
+  gap: 7px;
+  color: #263a27;
+  font-weight: 800;
+}
+
+.admin-order-card select {
+  min-height: 42px;
+  border: 1px solid #d7dbd4;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fff;
+  color: #263a27;
+  font-weight: 800;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -2326,6 +2409,14 @@ h1 {
 
   .download-file-button {
     width: 100%;
+  }
+
+  .admin-order-card__header {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-card__status {
+    justify-items: start;
   }
 
   .preview-pages-grid {

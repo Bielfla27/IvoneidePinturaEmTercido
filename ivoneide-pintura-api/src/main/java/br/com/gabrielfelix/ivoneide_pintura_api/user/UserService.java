@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserCreateRequest;
+import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserUpdateRequest;
 
 @Service
 public class UserService {
@@ -47,5 +48,19 @@ public class UserService {
 	public User findByEmail(String email) {
 		return userRepository.findByEmail(email)
 				.orElseThrow(() -> new UserNotFoundException(email));
+	}
+
+	public User updateProfile(String currentEmail, UserUpdateRequest request) {
+		User user = findByEmail(currentEmail);
+		String newEmail = request.getEmail().trim().toLowerCase();
+
+		if (!user.getEmail().equals(newEmail) && userRepository.existsByEmail(newEmail)) {
+			throw new UserEmailAlreadyExistsException(newEmail);
+		}
+
+		user.setNome(request.getNome().trim());
+		user.setEmail(newEmail);
+
+		return userRepository.save(user);
 	}
 }

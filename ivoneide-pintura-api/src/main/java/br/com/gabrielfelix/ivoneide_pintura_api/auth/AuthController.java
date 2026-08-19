@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.gabrielfelix.ivoneide_pintura_api.auth.dto.LoginRequest;
 import br.com.gabrielfelix.ivoneide_pintura_api.auth.dto.LoginResponse;
+import br.com.gabrielfelix.ivoneide_pintura_api.auth.dto.PasswordRecoveryRequest;
+import br.com.gabrielfelix.ivoneide_pintura_api.auth.dto.PasswordRecoveryResponse;
+import br.com.gabrielfelix.ivoneide_pintura_api.auth.dto.PasswordResetRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -23,5 +26,17 @@ public class AuthController {
 	@PostMapping("/login")
 	public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
 		return ResponseEntity.ok(authService.login(request));
+	}
+
+	@PostMapping("/recuperar-senha")
+	public ResponseEntity<PasswordRecoveryResponse> recoverPassword(
+			@Valid @RequestBody PasswordRecoveryRequest request) {
+		return ResponseEntity.ok(authService.startPasswordRecovery(request));
+	}
+
+	@PostMapping("/redefinir-senha")
+	public ResponseEntity<Void> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
+		authService.resetPassword(request);
+		return ResponseEntity.noContent().build();
 	}
 }

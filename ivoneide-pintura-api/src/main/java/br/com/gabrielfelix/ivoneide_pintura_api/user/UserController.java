@@ -8,12 +8,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.gabrielfelix.ivoneide_pintura_api.auth.dto.LoginResponse;
+import br.com.gabrielfelix.ivoneide_pintura_api.security.JwtService;
 import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserCreateRequest;
 import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserResponse;
+import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserUpdateRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -21,9 +25,11 @@ import jakarta.validation.Valid;
 public class UserController {
 
 	private final UserService userService;
+	private final JwtService jwtService;
 
-	public UserController(UserService userService) {
+	public UserController(UserService userService, JwtService jwtService) {
 		this.userService = userService;
+		this.jwtService = jwtService;
 	}
 
 	@PostMapping
@@ -48,6 +54,14 @@ public class UserController {
 	public ResponseEntity<UserResponse> findAuthenticatedUser(Authentication authentication) {
 		User user = userService.findByEmail(authentication.getName());
 		return ResponseEntity.ok(new UserResponse(user));
+	}
+
+	@PutMapping("/me")
+	public ResponseEntity<LoginResponse> updateAuthenticatedUser(@Valid @RequestBody UserUpdateRequest request,
+			Authentication authentication) {
+		User user = userService.updateProfile(authentication.getName(), request);
+		String token = jwtService.generateToken(user);
+		return ResponseEntity.ok(new LoginResponse(token, user.getId(), user.getNome(), user.getEmail(), user.getRole()));
 	}
 
 	@GetMapping("/{id}")

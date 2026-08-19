@@ -22,16 +22,21 @@ import {
 } from 'lucide-react';
 import {
   API_BASE_URL,
+  atualizarMeuPerfil,
   atualizarProduto,
+  atualizarStatusPedido,
   cadastrarUsuario,
   criarPedido,
   criarProduto,
   fazerLogin,
   listarDownloadsPedido,
   listarMeusPedidos,
+  listarPedidosAdmin,
   listarProdutos,
   listarProdutosAtivos,
+  redefinirSenha,
   simularPagamentoPedido,
+  solicitarRecuperacaoSenha,
 } from './api';
 
 const produtosPreview = [
@@ -118,6 +123,12 @@ const initialRegister = {
   nome: '',
   email: '',
   senha: '',
+};
+
+const initialRecoveryForm = {
+  email: '',
+  codigo: '',
+  novaSenha: '',
 };
 
 const initialProductForm = {
@@ -211,9 +222,12 @@ function getOrderStatusInfo(status) {
 
 function App() {
   const [activeTab, setActiveTab] = useState('login');
+  const [authMode, setAuthMode] = useState('access');
   const [activePage, setActivePage] = useState('produtos');
   const [loginForm, setLoginForm] = useState(initialLogin);
   const [registerForm, setRegisterForm] = useState(initialRegister);
+  const [recoveryForm, setRecoveryForm] = useState(initialRecoveryForm);
+  const [recoveryCode, setRecoveryCode] = useState('');
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [perfilForm, setPerfilForm] = useState(null);
   const [token, setToken] = useState('');
@@ -229,9 +243,14 @@ function App() {
   const [isPayingOrderId, setIsPayingOrderId] = useState(null);
   const [isLoadingDownloadsOrderId, setIsLoadingDownloadsOrderId] = useState(null);
   const [downloadsByOrderId, setDownloadsByOrderId] = useState({});
+  const [adminOrders, setAdminOrders] = useState([]);
+  const [isAdminOrdersLoading, setIsAdminOrdersLoading] = useState(false);
+  const [updatingOrderStatusId, setUpdatingOrderStatusId] = useState(null);
   const [isQuickSummaryOpen, setIsQuickSummaryOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [produtos, setProdutos] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState('relevantes');
   const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [productsMessage, setProductsMessage] = useState(null);
   const [productForm, setProductForm] = useState(initialProductForm);
@@ -252,6 +271,18 @@ function App() {
       ? 'Entre para acessar suas compras digitais.'
       : 'Crie sua conta para comprar apostilas em PDF.';
   }, [isLogin, usuarioLogado]);
+
+  const authTitle = useMemo(() => {
+    if (authMode === 'recover') {
+      return 'Recupere o acesso da sua conta.';
+    }
+
+    if (authMode === 'reset') {
+      return 'Crie uma nova senha segura.';
+    }
+
+    return greeting;
+  }, [authMode, greeting]);
 
   const totalItens = useMemo(
     () => pedidoItens.reduce((total, item) => total + item.quantidade, 0),
@@ -288,6 +319,31 @@ function App() {
       }),
     [produtos],
   );
+
+  const produtosVisiveis = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const filteredProducts = normalizedSearch
+      ? produtosCatalogo.filter((produto) =>
+          `${produto.nome} ${produto.descricao}`.toLowerCase().includes(normalizedSearch),
+        )
+      : produtosCatalogo;
+
+    return [...filteredProducts].sort((firstProduct, secondProduct) => {
+      if (sortOption === 'menor-preco') {
+        return firstProduct.precoValor - secondProduct.precoValor;
+      }
+
+      if (sortOption === 'maior-preco') {
+        return secondProduct.precoValor - firstProduct.precoValor;
+      }
+
+      if (sortOption === 'nome') {
+        return firstProduct.nome.localeCompare(secondProduct.nome, 'pt-BR');
+      }
+
+      return 0;
+    });
+  }, [produtosCatalogo, searchTerm, sortOption]);
 
   const coverPreviewUrl = useMemo(
     () => (productFiles.imagemCapa ? URL.createObjectURL(productFiles.imagemCapa) : ''),
@@ -330,6 +386,23 @@ function App() {
       setPageMessage({ type: 'error', text: error.message });
     } finally {
       setIsAdminProductsLoading(false);
+    }
+  }, []);
+
+  const carregarPedidosAdmin = useCallback(async (authToken) => {
+    if (!authToken) {
+      return;
+    }
+
+    setIsAdminOrdersLoading(true);
+
+    try {
+      const data = await listarPedidosAdmin(authToken);
+      setAdminOrders(data ?? []);
+    } catch (error) {
+      setPageMessage({ type: 'error', text: error.message });
+    } finally {
+      setIsAdminOrdersLoading(false);
     }
   }, []);
 
@@ -389,6 +462,11 @@ function App() {
   function updateRegisterField(event) {
     const { name, value } = event.target;
     setRegisterForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function updateRecoveryField(event) {
+    const { name, value } = event.target;
+    setRecoveryForm((current) => ({ ...current, [name]: value }));
   }
 
   function updatePerfilField(event) {
@@ -559,6 +637,39 @@ function App() {
     }
   }
 
+  async function handleAtualizarStatusPedido(orderId, status) {
+    const authToken = normalizeToken(token || localStorage.getItem('ivoneideToken'));
+
+    if (!authToken) {
+      handleExpiredSession();
+      return;
+    }
+
+    setUpdatingOrderStatusId(orderId);
+    setPageMessage(null);
+
+    try {
+      const updatedOrder = await atualizarStatusPedido(authToken, orderId, status);
+      setAdminOrders((current) =>
+        current.map((pedido) => (pedido.id === updatedOrder.id ? updatedOrder : pedido)),
+      );
+      updateOrderInList(updatedOrder);
+      setPageMessage({
+        type: 'success',
+        text: 'Status do pedido atualizado com sucesso.',
+      });
+    } catch (error) {
+      if (error.status === 401) {
+        handleExpiredSession();
+        return;
+      }
+
+      setPageMessage({ type: 'error', text: error.message });
+    } finally {
+      setUpdatingOrderStatusId(null);
+    }
+  }
+
   function openDownload(url) {
     const downloadUrl = resolveAssetUrl(url);
 
@@ -620,6 +731,62 @@ function App() {
       });
     } catch (error) {
       setMessage({ type: 'error', text: error.message });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handlePasswordRecovery(event) {
+    event.preventDefault();
+    setIsLoading(true);
+    setMessage(null);
+    setRecoveryCode('');
+
+    try {
+      const data = await solicitarRecuperacaoSenha({ email: recoveryForm.email });
+      setRecoveryCode(data.codigoTeste ?? '');
+      setRecoveryForm((current) => ({
+        ...current,
+        codigo: data.codigoTeste ?? current.codigo,
+      }));
+      setAuthMode('reset');
+      setMessage({
+        type: 'success',
+        text: data.codigoTeste
+          ? 'Codigo gerado com sucesso. Use o codigo exibido abaixo para testar.'
+          : 'Se este e-mail existir, enviaremos um codigo de recuperacao.',
+      });
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handlePasswordReset(event) {
+    event.preventDefault();
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      await redefinirSenha(recoveryForm);
+      setLoginForm({
+        email: recoveryForm.email,
+        senha: '',
+      });
+      setRecoveryForm(initialRecoveryForm);
+      setRecoveryCode('');
+      setAuthMode('access');
+      setActiveTab('login');
+      setMessage({
+        type: 'success',
+        text: 'Senha redefinida com sucesso. Entre com sua nova senha.',
+      });
+    } catch {
+      setMessage({
+        type: 'error',
+        text: 'Codigo invalido, expirado ou e-mail incorreto.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -821,17 +988,43 @@ function App() {
     }
   }
 
-  function salvarPerfil(event) {
+  async function salvarPerfil(event) {
     event.preventDefault();
-    setUsuarioLogado((current) => ({
-      ...current,
-      nome: perfilForm.nome,
-      email: perfilForm.email,
-    }));
-    setPageMessage({
-      type: 'success',
-      text: 'Dados atualizados na tela. Depois vamos criar o endpoint para salvar no backend.',
-    });
+    setPageMessage(null);
+
+    const authToken = normalizeToken(token || localStorage.getItem('ivoneideToken'));
+
+    if (!authToken) {
+      handleExpiredSession();
+      return;
+    }
+
+    try {
+      const data = await atualizarMeuPerfil(authToken, perfilForm);
+      const nextToken = normalizeToken(data.token);
+      const updatedUser = {
+        id: data.usuarioId,
+        nome: data.nome,
+        email: data.email,
+        role: data.role,
+      };
+
+      localStorage.setItem('ivoneideToken', nextToken);
+      setToken(nextToken);
+      setUsuarioLogado(updatedUser);
+      setPerfilForm({ nome: updatedUser.nome, email: updatedUser.email });
+      setPageMessage({
+        type: 'success',
+        text: 'Perfil atualizado com sucesso.',
+      });
+    } catch (error) {
+      if (error.status === 401) {
+        handleExpiredSession();
+        return;
+      }
+
+      setPageMessage({ type: 'error', text: error.message });
+    }
   }
 
   function renderCatalogo() {
@@ -843,10 +1036,15 @@ function App() {
             <p>Explore nossas apostilas em PDF para pintar e se inspirar.</p>
           </div>
           <div className="catalog-controls">
-            <select aria-label="Ordenar apostilas" defaultValue="relevantes">
+            <select
+              aria-label="Ordenar apostilas"
+              value={sortOption}
+              onChange={(event) => setSortOption(event.target.value)}
+            >
               <option value="relevantes">Mais relevantes</option>
               <option value="menor-preco">Menor preco</option>
               <option value="maior-preco">Maior preco</option>
+              <option value="nome">Nome</option>
             </select>
             <button className="view-button view-button--active" type="button" aria-label="Grade">
               <Grid2X2 size={20} aria-hidden="true" />
@@ -864,7 +1062,7 @@ function App() {
         )}
 
         <div className="store-grid">
-          {produtosCatalogo.map((produto) => (
+          {produtosVisiveis.map((produto) => (
             <article
               className="store-product-card"
               key={produto.id}
@@ -956,6 +1154,14 @@ function App() {
                 Cadastrar produto
               </button>
             )}
+          </div>
+        )}
+
+        {!isProductsLoading && !productsMessage && produtosCatalogo.length > 0 && produtosVisiveis.length === 0 && (
+          <div className="empty-page compact-empty">
+            <Search size={42} aria-hidden="true" />
+            <strong>Nenhuma apostila encontrada</strong>
+            <p>Tente buscar por outro nome ou descricao.</p>
           </div>
         )}
 
@@ -1347,6 +1553,128 @@ function App() {
                       <strong>{formatCurrency(Number(pedido.valorTotal))}</strong>
                     </div>
                     {renderDownloadFiles(pedido)}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderAdminPedidos() {
+    if (usuarioLogado.role !== 'ADMIN') {
+      return renderPedidos();
+    }
+
+    const totalPedidos = adminOrders.length;
+    const totalVendido = adminOrders.reduce(
+      (total, pedido) => total + Number(pedido.valorTotal ?? 0),
+      0,
+    );
+    const pedidosPagos = adminOrders.filter((pedido) => pedido.status === 'PAGO').length;
+
+    return (
+      <section className="store-content page-card" aria-label="Administrar pedidos">
+        <div className="store-title">
+          <div>
+            <h2>Admin pedidos</h2>
+            <p>Acompanhe clientes, itens, valores e status dos pedidos.</p>
+          </div>
+          <span className="status-pill">ADMIN</span>
+        </div>
+
+        {pageMessage && (
+          <div className={`feedback feedback--${pageMessage.type}`}>
+            {pageMessage.text}
+          </div>
+        )}
+
+        {!isAdminOrdersLoading && adminOrders.length > 0 && (
+          <div className="orders-overview">
+            <article>
+              <span>Pedidos</span>
+              <strong>{totalPedidos}</strong>
+            </article>
+            <article>
+              <span>Pagos</span>
+              <strong>{pedidosPagos}</strong>
+            </article>
+            <article>
+              <span>Total vendido</span>
+              <strong>{formatCurrency(totalVendido)}</strong>
+            </article>
+          </div>
+        )}
+
+        {isAdminOrdersLoading ? (
+          <div className="empty-page compact-empty">
+            <ClipboardList size={42} aria-hidden="true" />
+            <strong>Buscando pedidos...</strong>
+            <p>Estamos carregando todos os pedidos da loja.</p>
+          </div>
+        ) : adminOrders.length === 0 ? (
+          <div className="empty-page compact-empty">
+            <ClipboardList size={42} aria-hidden="true" />
+            <strong>Nenhum pedido encontrado</strong>
+            <p>Os pedidos dos clientes aparecerao aqui.</p>
+          </div>
+        ) : (
+          <div className="admin-orders-list">
+            {adminOrders.map((pedido) => {
+              const statusInfo = getOrderStatusInfo(pedido.status);
+              const totalPedidoItens = pedido.itens?.reduce(
+                (total, item) => total + item.quantidade,
+                0,
+              ) ?? 0;
+
+              return (
+                <article className="admin-order-card" key={pedido.id}>
+                  <div className="admin-order-card__header">
+                    <div>
+                      <span className="order-number">Pedido #{pedido.id}</span>
+                      <strong>{pedido.usuarioNome}</strong>
+                      <p>
+                        {formatDate(new Date(pedido.criadoEm))} - {totalPedidoItens}{' '}
+                        {totalPedidoItens === 1 ? 'item' : 'itens'}
+                      </p>
+                    </div>
+                    <div className="admin-order-card__status">
+                      <span className={statusInfo.className}>{statusInfo.label}</span>
+                      <strong>{formatCurrency(Number(pedido.valorTotal))}</strong>
+                    </div>
+                    <label>
+                      Status
+                      <select
+                        value={pedido.status}
+                        onChange={(event) => handleAtualizarStatusPedido(pedido.id, event.target.value)}
+                        disabled={updatingOrderStatusId === pedido.id}
+                      >
+                        <option value="CRIADO">Criado</option>
+                        <option value="AGUARDANDO_PAGAMENTO">Aguardando pagamento</option>
+                        <option value="PAGO">Pago</option>
+                        <option value="CANCELADO">Cancelado</option>
+                        <option value="EXPIRADO">Expirado</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="order-items-list">
+                    {pedido.itens?.map((item) => (
+                      <div className="order-item-row" key={item.id ?? item.produtoId}>
+                        {renderOrderItemThumbnail(item)}
+                        <div>
+                          <strong>{item.produtoNome}</strong>
+                          <p>{item.produtoDescricao || 'Apostila digital em PDF.'}</p>
+                        </div>
+                        <div className="order-item-row__values">
+                          <span>Qtd. {item.quantidade}</span>
+                          <strong>{formatCurrency(Number(item.subtotal))}</strong>
+                          <small>{formatCurrency(Number(item.precoUnitario))} cada</small>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </article>
               );
@@ -1799,6 +2127,10 @@ function App() {
       return renderAdminProdutos();
     }
 
+    if (activePage === 'admin-pedidos') {
+      return renderAdminPedidos();
+    }
+
     return renderCatalogo();
   }
 
@@ -1824,7 +2156,12 @@ function App() {
 
           <label className="store-search" aria-label="Buscar apostilas">
             <Search size={20} aria-hidden="true" />
-            <input type="search" placeholder="Buscar apostilas e colecoes..." />
+            <input
+              type="search"
+              placeholder="Buscar apostilas e colecoes..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
           </label>
 
           <div className="store-actions">
@@ -1894,21 +2231,38 @@ function App() {
               Downloads
             </button>
             {usuarioLogado.role === 'ADMIN' && (
-              <button
-                className={
-                  activePage === 'admin-produtos'
-                    ? 'sidebar-link sidebar-link--active'
-                    : 'sidebar-link'
-                }
-                type="button"
-                onClick={() => {
-                  setActivePage('admin-produtos');
-                  carregarAdminProdutos(normalizeToken(token || localStorage.getItem('ivoneideToken')));
-                }}
-              >
-                <PackageCheck size={23} aria-hidden="true" />
-                Admin produtos
-              </button>
+              <>
+                <button
+                  className={
+                    activePage === 'admin-produtos'
+                      ? 'sidebar-link sidebar-link--active'
+                      : 'sidebar-link'
+                  }
+                  type="button"
+                  onClick={() => {
+                    setActivePage('admin-produtos');
+                    carregarAdminProdutos(normalizeToken(token || localStorage.getItem('ivoneideToken')));
+                  }}
+                >
+                  <PackageCheck size={23} aria-hidden="true" />
+                  Admin produtos
+                </button>
+                <button
+                  className={
+                    activePage === 'admin-pedidos'
+                      ? 'sidebar-link sidebar-link--active'
+                      : 'sidebar-link'
+                  }
+                  type="button"
+                  onClick={() => {
+                    setActivePage('admin-pedidos');
+                    carregarPedidosAdmin(normalizeToken(token || localStorage.getItem('ivoneideToken')));
+                  }}
+                >
+                  <ClipboardList size={23} aria-hidden="true" />
+                  Admin pedidos
+                </button>
+              </>
             )}
 
             <div className="love-note">
@@ -2084,24 +2438,26 @@ function App() {
       <section className="auth-panel" aria-label="Login e cadastro">
         <div className="auth-card">
           <p className="eyebrow">Minha conta</p>
-          <h2>{greeting}</h2>
+          <h2>{authTitle}</h2>
 
-          <div className="tabs" role="tablist" aria-label="Escolha login ou cadastro">
-            <button
-              className={isLogin ? 'tab tab--active' : 'tab'}
-              type="button"
-              onClick={() => setActiveTab('login')}
-            >
-              Login
-            </button>
-            <button
-              className={!isLogin ? 'tab tab--active' : 'tab'}
-              type="button"
-              onClick={() => setActiveTab('cadastro')}
-            >
-              Cadastro
-            </button>
-          </div>
+          {authMode === 'access' && (
+            <div className="tabs" role="tablist" aria-label="Escolha login ou cadastro">
+              <button
+                className={isLogin ? 'tab tab--active' : 'tab'}
+                type="button"
+                onClick={() => setActiveTab('login')}
+              >
+                Login
+              </button>
+              <button
+                className={!isLogin ? 'tab tab--active' : 'tab'}
+                type="button"
+                onClick={() => setActiveTab('cadastro')}
+              >
+                Cadastro
+              </button>
+            </div>
+          )}
 
           {message && (
             <div className={`feedback feedback--${message.type}`}>
@@ -2109,7 +2465,100 @@ function App() {
             </div>
           )}
 
-          {isLogin ? (
+          {authMode === 'recover' && (
+            <form className="auth-form" onSubmit={handlePasswordRecovery}>
+              <label>
+                E-mail cadastrado
+                <input
+                  name="email"
+                  type="email"
+                  value={recoveryForm.email}
+                  onChange={updateRecoveryField}
+                  placeholder="cliente@email.com"
+                  required
+                />
+              </label>
+
+              <button className="primary-button" type="submit" disabled={isLoading}>
+                {isLoading ? 'Gerando codigo...' : 'Gerar codigo de recuperacao'}
+              </button>
+              <button
+                className="auth-link-button"
+                type="button"
+                onClick={() => {
+                  setAuthMode('access');
+                  setMessage(null);
+                }}
+              >
+                Voltar para login
+              </button>
+            </form>
+          )}
+
+          {authMode === 'reset' && (
+            <form className="auth-form" onSubmit={handlePasswordReset}>
+              {recoveryCode && (
+                <div className="test-code-box">
+                  <span>Codigo para teste</span>
+                  <strong>{recoveryCode}</strong>
+                </div>
+              )}
+
+              <label>
+                E-mail cadastrado
+                <input
+                  name="email"
+                  type="email"
+                  value={recoveryForm.email}
+                  onChange={updateRecoveryField}
+                  placeholder="cliente@email.com"
+                  required
+                />
+              </label>
+
+              <label>
+                Codigo
+                <input
+                  name="codigo"
+                  type="text"
+                  value={recoveryForm.codigo}
+                  onChange={updateRecoveryField}
+                  placeholder="000000"
+                  inputMode="numeric"
+                  required
+                />
+              </label>
+
+              <label>
+                Nova senha
+                <input
+                  name="novaSenha"
+                  type="password"
+                  value={recoveryForm.novaSenha}
+                  onChange={updateRecoveryField}
+                  placeholder="Minimo 8 caracteres"
+                  minLength="8"
+                  required
+                />
+              </label>
+
+              <button className="primary-button" type="submit" disabled={isLoading}>
+                {isLoading ? 'Redefinindo...' : 'Redefinir senha'}
+              </button>
+              <button
+                className="auth-link-button"
+                type="button"
+                onClick={() => {
+                  setAuthMode('recover');
+                  setMessage(null);
+                }}
+              >
+                Gerar outro codigo
+              </button>
+            </form>
+          )}
+
+          {authMode === 'access' && isLogin && (
             <form className="auth-form" onSubmit={handleLogin}>
               <label>
                 E-mail
@@ -2139,8 +2588,24 @@ function App() {
               <button className="primary-button" type="submit" disabled={isLoading}>
                 {isLoading ? 'Entrando...' : 'Entrar'}
               </button>
+              <button
+                className="auth-link-button"
+                type="button"
+                onClick={() => {
+                  setRecoveryForm((current) => ({
+                    ...current,
+                    email: loginForm.email,
+                  }));
+                  setAuthMode('recover');
+                  setMessage(null);
+                }}
+              >
+                Esqueci minha senha
+              </button>
             </form>
-          ) : (
+          )}
+
+          {authMode === 'access' && !isLogin && (
             <form className="auth-form" onSubmit={handleRegister}>
               <label>
                 Nome
