@@ -76,6 +76,19 @@ export function listarMeusPedidos(token) {
   });
 }
 
+export function simularPagamentoPedido(token, id) {
+  return request(`/api/pedidos/${id}/pagamento-simulado`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+}
+
+export function listarDownloadsPedido(token, id) {
+  return request(`/api/pedidos/${id}/downloads`, {
+    headers: authHeaders(token),
+  });
+}
+
 export function listarProdutosAtivos() {
   return request('/api/produtos/ativos');
 }

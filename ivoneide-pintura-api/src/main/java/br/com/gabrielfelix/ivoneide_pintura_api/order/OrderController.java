@@ -65,6 +65,11 @@ public class OrderController {
 		return ResponseEntity.ok(orderService.findDownloads(id, authentication.getName()));
 	}
 
+	@PostMapping("/{id}/pagamento-simulado")
+	public ResponseEntity<OrderResponse> simulatePayment(@PathVariable Long id, Authentication authentication) {
+		return ResponseEntity.ok(orderService.simulatePayment(id, authentication.getName()));
+	}
+
 	@PatchMapping("/{id}/status")
 	public ResponseEntity<OrderResponse> updateStatus(@PathVariable Long id,
 			@Valid @RequestBody OrderStatusUpdateRequest request) {

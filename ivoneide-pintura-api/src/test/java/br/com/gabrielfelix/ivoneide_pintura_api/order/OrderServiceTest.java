@@ -170,6 +170,36 @@ class OrderServiceTest {
 		assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatus.PAGO);
 	}
 
+	@Test
+	void shouldSimulatePaymentForOwnCreatedOrder() {
+		User user = user(1L, UserRole.USER);
+		Order order = order(50L, user, OrderStatus.CRIADO);
+
+		when(userService.findByEmail("user@email.com")).thenReturn(user);
+		when(orderRepository.findByIdAndUsuario(50L, user)).thenReturn(Optional.of(order));
+		when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		OrderResponse response = orderService.simulatePayment(50L, "user@email.com");
+
+		assertThat(response.getStatus()).isEqualTo(OrderStatus.PAGO);
+		verify(orderRepository).save(order);
+	}
+
+	@Test
+	void shouldNotSimulatePaymentForCanceledOrder() {
+		User user = user(1L, UserRole.USER);
+		Order order = order(50L, user, OrderStatus.CANCELADO);
+
+		when(userService.findByEmail("user@email.com")).thenReturn(user);
+		when(orderRepository.findByIdAndUsuario(50L, user)).thenReturn(Optional.of(order));
+
+		assertThatThrownBy(() -> orderService.simulatePayment(50L, "user@email.com"))
+				.isInstanceOf(OrderBusinessException.class)
+				.hasMessage("Este pedido nao pode ser pago.");
+
+		verify(orderRepository, never()).save(any(Order.class));
+	}
+
 	private OrderCreateRequest orderRequest(Long productId, Integer quantity) {
 		OrderItemRequest itemRequest = new OrderItemRequest();
 		itemRequest.setProdutoId(productId);

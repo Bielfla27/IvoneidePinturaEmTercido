@@ -27,9 +27,11 @@ import {
   criarPedido,
   criarProduto,
   fazerLogin,
+  listarDownloadsPedido,
   listarMeusPedidos,
   listarProdutos,
   listarProdutosAtivos,
+  simularPagamentoPedido,
 } from './api';
 
 const produtosPreview = [
@@ -178,6 +180,11 @@ function getOrderStatusInfo(status) {
       className: 'status-pill status-pill--created',
       description: 'Aguardando confirmacao de pagamento.',
     },
+    AGUARDANDO_PAGAMENTO: {
+      label: 'Aguardando pagamento',
+      className: 'status-pill status-pill--created',
+      description: 'Aguardando confirmacao de pagamento.',
+    },
     PAGO: {
       label: 'Pago',
       className: 'status-pill status-pill--paid',
@@ -219,6 +226,9 @@ function App() {
   const [pedidos, setPedidos] = useState([]);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
+  const [isPayingOrderId, setIsPayingOrderId] = useState(null);
+  const [isLoadingDownloadsOrderId, setIsLoadingDownloadsOrderId] = useState(null);
+  const [downloadsByOrderId, setDownloadsByOrderId] = useState({});
   const [isQuickSummaryOpen, setIsQuickSummaryOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [produtos, setProdutos] = useState([]);
@@ -466,6 +476,12 @@ function App() {
     );
   }
 
+  function updateOrderInList(updatedOrder) {
+    setPedidos((current) =>
+      current.map((pedido) => (pedido.id === updatedOrder.id ? updatedOrder : pedido)),
+    );
+  }
+
   async function carregarMeusPedidos(authToken) {
     if (!authToken) {
       return;
@@ -481,6 +497,76 @@ function App() {
     } finally {
       setIsOrdersLoading(false);
     }
+  }
+
+  async function carregarDownloadsPedido(orderId) {
+    const authToken = normalizeToken(token || localStorage.getItem('ivoneideToken'));
+
+    if (!authToken) {
+      handleExpiredSession();
+      return;
+    }
+
+    setIsLoadingDownloadsOrderId(orderId);
+
+    try {
+      const downloads = await listarDownloadsPedido(authToken, orderId);
+      setDownloadsByOrderId((current) => ({
+        ...current,
+        [orderId]: downloads ?? [],
+      }));
+    } catch (error) {
+      if (error.status === 401) {
+        handleExpiredSession();
+        return;
+      }
+
+      setPageMessage({ type: 'error', text: error.message });
+    } finally {
+      setIsLoadingDownloadsOrderId(null);
+    }
+  }
+
+  async function handleSimularPagamento(orderId) {
+    const authToken = normalizeToken(token || localStorage.getItem('ivoneideToken'));
+
+    if (!authToken) {
+      handleExpiredSession();
+      return;
+    }
+
+    setIsPayingOrderId(orderId);
+    setPageMessage(null);
+
+    try {
+      const updatedOrder = await simularPagamentoPedido(authToken, orderId);
+      updateOrderInList(updatedOrder);
+      setExpandedOrderId(updatedOrder.id);
+      await carregarDownloadsPedido(updatedOrder.id);
+      setPageMessage({
+        type: 'success',
+        text: 'Pagamento simulado aprovado. Downloads liberados.',
+      });
+    } catch (error) {
+      if (error.status === 401) {
+        handleExpiredSession();
+        return;
+      }
+
+      setPageMessage({ type: 'error', text: error.message });
+    } finally {
+      setIsPayingOrderId(null);
+    }
+  }
+
+  function openDownload(url) {
+    const downloadUrl = resolveAssetUrl(url);
+
+    if (!downloadUrl) {
+      return;
+    }
+
+    window.open(downloadUrl, '_blank', 'noopener,noreferrer');
   }
 
   async function handleLogin(event) {
@@ -551,6 +637,7 @@ function App() {
     setPedidoCriadoEm(null);
     setPedidos([]);
     setExpandedOrderId(null);
+    setDownloadsByOrderId({});
     setActivePage('produtos');
     setIsQuickSummaryOpen(false);
   }
@@ -564,6 +651,7 @@ function App() {
     setPedidoCriadoEm(null);
     setPedidos([]);
     setExpandedOrderId(null);
+    setDownloadsByOrderId({});
     setEditingProduct(null);
     setProductForm(initialProductForm);
     setProductFiles(initialProductFiles);
@@ -980,6 +1068,53 @@ function App() {
     );
   }
 
+  function renderDownloadFiles(pedido) {
+    const downloads = downloadsByOrderId[pedido.id] ?? [];
+    const isLoadingDownloads = isLoadingDownloadsOrderId === pedido.id;
+
+    if (pedido.status !== 'PAGO') {
+      return (
+        <div className="download-lock">
+          <FileText size={22} aria-hidden="true" />
+          <div>
+            <strong>Downloads bloqueados</strong>
+            <p>Os PDFs serao liberados quando o pagamento for confirmado.</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (downloads.length === 0) {
+      return (
+        <button
+          className="download-button compact-button"
+          type="button"
+          onClick={() => carregarDownloadsPedido(pedido.id)}
+          disabled={isLoadingDownloads}
+        >
+          <Download size={17} aria-hidden="true" />
+          {isLoadingDownloads ? 'Buscando arquivos...' : 'Carregar downloads'}
+        </button>
+      );
+    }
+
+    return (
+      <div className="download-files-list">
+        {downloads.map((download) => (
+          <button
+            className="download-file-button"
+            type="button"
+            key={`${pedido.id}-${download.produtoId}`}
+            onClick={() => openDownload(download.urlPdf)}
+          >
+            <Download size={17} aria-hidden="true" />
+            <span>{download.produtoNome}</span>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   function renderPedidos() {
     const totalPedidos = pedidos.length;
     const totalGasto = pedidos.reduce(
@@ -1120,6 +1255,24 @@ function App() {
                           <strong>{formatCurrency(Number(pedido.valorTotal))}</strong>
                         </div>
                       </div>
+
+                      <div className="order-actions-panel">
+                        {pedido.status === 'PAGO' ? (
+                          renderDownloadFiles(pedido)
+                        ) : (
+                          <button
+                            className="download-button compact-button"
+                            type="button"
+                            onClick={() => handleSimularPagamento(pedido.id)}
+                            disabled={isPayingOrderId === pedido.id}
+                          >
+                            <CreditCard size={17} aria-hidden="true" />
+                            {isPayingOrderId === pedido.id
+                              ? 'Confirmando pagamento...'
+                              : 'Pagar agora (simulado)'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </article>
@@ -1150,19 +1303,54 @@ function App() {
             <p>Quando um pedido estiver com status PAGO, os PDFs aparecem aqui.</p>
           </div>
         ) : (
-          <div className="orders-list">
-            {paidOrders.map((pedido) => (
-              <article className="order-card" key={pedido.id}>
-                <PackageCheck size={30} aria-hidden="true" />
-                <div>
-                  <strong>Pedido #{pedido.id}</strong>
-                  <p>{pedido.itens?.length ?? 0} apostilas liberadas</p>
-                </div>
-                <button className="download-button compact-button" type="button">
-                  Baixar PDFs
-                </button>
-              </article>
-            ))}
+          <div className="downloads-page-list">
+            {paidOrders.map((pedido) => {
+              const statusInfo = getOrderStatusInfo(pedido.status);
+              const totalPedidoItens = pedido.itens?.reduce(
+                (total, item) => total + item.quantidade,
+                0,
+              ) ?? 0;
+
+              return (
+                <article className="download-order-card" key={pedido.id}>
+                  <div className="download-order-card__header">
+                    <div>
+                      <span className="order-number">Pedido #{pedido.id}</span>
+                      <strong>{totalPedidoItens} apostila(s) liberada(s)</strong>
+                      <p>Compra realizada em {formatDate(new Date(pedido.criadoEm))}</p>
+                    </div>
+                    <span className={statusInfo.className}>{statusInfo.label}</span>
+                  </div>
+
+                  <div className="order-items-list">
+                    {pedido.itens?.map((item) => (
+                      <div className="order-item-row" key={item.id ?? item.produtoId}>
+                        {renderOrderItemThumbnail(item)}
+                        <div>
+                          <strong>{item.produtoNome}</strong>
+                          <p>{item.produtoDescricao || 'Apostila digital em PDF.'}</p>
+                          {item.produtoQuantidadePaginas && (
+                            <span>{item.produtoQuantidadePaginas} paginas</span>
+                          )}
+                        </div>
+                        <div className="order-item-row__values">
+                          <span>Qtd. {item.quantidade}</span>
+                          <strong>{formatCurrency(Number(item.subtotal))}</strong>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="download-order-card__footer">
+                    <div>
+                      <span>Total pago</span>
+                      <strong>{formatCurrency(Number(pedido.valorTotal))}</strong>
+                    </div>
+                    {renderDownloadFiles(pedido)}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

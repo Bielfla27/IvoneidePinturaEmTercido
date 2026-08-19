@@ -87,6 +87,22 @@ public class OrderService {
 		return new OrderResponse(orderRepository.save(order));
 	}
 
+	@Transactional
+	public OrderResponse simulatePayment(Long id, String userEmail) {
+		Order order = findOrderByIdForUser(id, userEmail);
+
+		if (order.getStatus() == OrderStatus.PAGO) {
+			return new OrderResponse(order);
+		}
+
+		if (order.getStatus() != OrderStatus.CRIADO && order.getStatus() != OrderStatus.AGUARDANDO_PAGAMENTO) {
+			throw new OrderBusinessException("Este pedido nao pode ser pago.");
+		}
+
+		order.setStatus(OrderStatus.PAGO);
+		return new OrderResponse(orderRepository.save(order));
+	}
+
 	@Transactional(readOnly = true)
 	public List<OrderResponse> findMyPurchaseHistory(String userEmail) {
 		User usuario = userService.findByEmail(userEmail);

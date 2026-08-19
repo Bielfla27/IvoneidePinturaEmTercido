@@ -1644,6 +1644,107 @@ h1 {
   font-size: 1.22rem;
 }
 
+.order-actions-panel {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.download-lock {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #efe3c8;
+  border-radius: 8px;
+  background: #fffaf0;
+}
+
+.download-lock svg {
+  flex: 0 0 auto;
+  color: #8a5a00;
+}
+
+.download-lock strong {
+  color: #563a11;
+}
+
+.download-lock p {
+  margin: 4px 0 0;
+  color: #7a6746;
+}
+
+.downloads-page-list,
+.download-files-list {
+  display: grid;
+  gap: 14px;
+}
+
+.download-order-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #e7e3dd;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(48, 59, 44, 0.06);
+}
+
+.download-order-card__header,
+.download-order-card__footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.download-order-card__header div,
+.download-order-card__footer div {
+  display: grid;
+  gap: 4px;
+}
+
+.download-order-card__header strong,
+.download-order-card__footer strong {
+  color: #0f6b39;
+}
+
+.download-order-card__header p {
+  margin: 0;
+  color: #71806e;
+}
+
+.download-order-card__footer {
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #e7e3dd;
+}
+
+.download-order-card__footer span {
+  color: #71806e;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.download-file-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #2f793b;
+  color: #fff;
+  font-weight: 900;
+}
+
+.download-file-button svg {
+  flex: 0 0 auto;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -2208,6 +2309,23 @@ h1 {
   .order-details__footer div {
     min-width: 0;
     text-align: left;
+  }
+
+  .order-actions-panel {
+    justify-content: stretch;
+  }
+
+  .order-actions-panel .compact-button {
+    width: 100%;
+  }
+
+  .download-order-card__header,
+  .download-order-card__footer {
+    flex-direction: column;
+  }
+
+  .download-file-button {
+    width: 100%;
   }
 
   .preview-pages-grid {
