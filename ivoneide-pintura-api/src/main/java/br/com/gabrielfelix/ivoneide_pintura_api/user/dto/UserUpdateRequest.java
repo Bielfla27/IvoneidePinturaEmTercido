@@ -15,6 +15,12 @@ public class UserUpdateRequest {
 	@Size(max = 180, message = "O e-mail deve ter no maximo 180 caracteres.")
 	private String email;
 
+	@Size(min = 8, message = "A senha atual deve ter no minimo 8 caracteres.")
+	private String senhaAtual;
+
+	@Size(min = 8, message = "A nova senha deve ter no minimo 8 caracteres.")
+	private String novaSenha;
+
 	public String getNome() {
 		return nome;
 	}
@@ -29,5 +35,21 @@ public class UserUpdateRequest {
 
 	public void setEmail(String email) {
 		this.email = email;
+	}
+
+	public String getSenhaAtual() {
+		return senhaAtual;
+	}
+
+	public void setSenhaAtual(String senhaAtual) {
+		this.senhaAtual = senhaAtual;
+	}
+
+	public String getNovaSenha() {
+		return novaSenha;
+	}
+
+	public void setNovaSenha(String novaSenha) {
+		this.novaSenha = novaSenha;
 	}
 }

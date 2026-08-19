@@ -34,7 +34,7 @@ public class OrderService {
 	@Transactional
 	public OrderResponse create(String userEmail, OrderCreateRequest request) {
 		User usuario = userService.findByEmail(userEmail);
-		Order order = new Order(usuario, OrderStatus.CRIADO, BigDecimal.ZERO);
+		Order order = new Order(usuario, OrderStatus.AGUARDANDO_PAGAMENTO, BigDecimal.ZERO);
 		BigDecimal valorTotal = BigDecimal.ZERO;
 
 		for (OrderItemRequest itemRequest : request.getItens()) {

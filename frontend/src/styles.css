@@ -787,6 +787,43 @@ h1 {
   color: #2f793b;
 }
 
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px;
+  border: 1px solid #e7e3dd;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.filter-bar label {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+  color: #51604d;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.filter-bar select,
+.status-filter {
+  min-height: 42px;
+  border: 1px solid #dbe2d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #263a27;
+  padding: 0 12px;
+  font-weight: 800;
+}
+
+.filter-bar .outline-button {
+  min-height: 52px;
+  padding: 0 18px;
+}
+
 .store-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1486,6 +1523,48 @@ h1 {
   color: #73806f;
 }
 
+.checkout-customer {
+  display: grid;
+  gap: 4px;
+}
+
+.checkout-customer span,
+.checkout-methods > span {
+  color: #71806e;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.checkout-customer strong {
+  color: #213020;
+}
+
+.checkout-methods {
+  display: grid;
+  gap: 10px;
+}
+
+.checkout-methods div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.method-button {
+  min-height: 40px;
+  border: 1px solid #dbe2d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #51604d;
+  font-weight: 900;
+}
+
+.method-button--active {
+  border-color: #2f793b;
+  background: #eef7ee;
+  color: #2f793b;
+}
+
 .order-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -1828,6 +1907,14 @@ h1 {
   font-weight: 800;
 }
 
+.admin-title-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -1870,6 +1957,18 @@ h1 {
   display: grid;
   gap: 16px;
   padding: 22px;
+}
+
+.profile-form-section {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e7e3dd;
+}
+
+.profile-form-section strong {
+  color: #213020;
+  font-size: 1.02rem;
 }
 
 .admin-products-layout {
@@ -2356,6 +2455,11 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .cart-page-grid,
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
   .admin-products-layout {
     grid-template-columns: 1fr;
   }
@@ -2456,6 +2560,18 @@ h1 {
   .store-user {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .filter-bar,
+  .admin-title-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filter-bar label,
+  .status-filter,
+  .filter-bar .outline-button {
+    width: 100%;
   }
 
   .store-user {

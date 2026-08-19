@@ -65,6 +65,7 @@ class OrderServiceTest {
 		OrderResponse response = orderService.create("user@email.com", request);
 
 		assertThat(response.getId()).isEqualTo(100L);
+		assertThat(response.getStatus()).isEqualTo(OrderStatus.AGUARDANDO_PAGAMENTO);
 		assertThat(response.getValorTotal()).isEqualByComparingTo("30.00");
 		assertThat(response.getItens()).hasSize(1);
 		assertThat(response.getItens().get(0).getSubtotal()).isEqualByComparingTo("30.00");

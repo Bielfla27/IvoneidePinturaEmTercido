@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import br.com.gabrielfelix.ivoneide_pintura_api.auth.InvalidCredentialsException;
 import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserCreateRequest;
 import br.com.gabrielfelix.ivoneide_pintura_api.user.dto.UserUpdateRequest;
 
@@ -61,6 +62,18 @@ public class UserService {
 		user.setNome(request.getNome().trim());
 		user.setEmail(newEmail);
 
+		if (hasText(request.getNovaSenha())) {
+			if (!hasText(request.getSenhaAtual()) || !passwordEncoder.matches(request.getSenhaAtual(), user.getSenha())) {
+				throw new InvalidCredentialsException();
+			}
+
+			user.setSenha(passwordEncoder.encode(request.getNovaSenha()));
+		}
+
 		return userRepository.save(user);
+	}
+
+	private boolean hasText(String value) {
+		return value != null && !value.isBlank();
 	}
 }

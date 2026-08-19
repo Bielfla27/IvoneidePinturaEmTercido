@@ -131,6 +131,11 @@ const initialRecoveryForm = {
   novaSenha: '',
 };
 
+const initialProfilePasswordForm = {
+  senhaAtual: '',
+  novaSenha: '',
+};
+
 const initialProductForm = {
   nome: '',
   descricao: '',
@@ -230,6 +235,7 @@ function App() {
   const [recoveryCode, setRecoveryCode] = useState('');
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [perfilForm, setPerfilForm] = useState(null);
+  const [perfilSenhaForm, setPerfilSenhaForm] = useState(initialProfilePasswordForm);
   const [token, setToken] = useState('');
   const [message, setMessage] = useState(null);
   const [pageMessage, setPageMessage] = useState(null);
@@ -251,6 +257,11 @@ function App() {
   const [produtos, setProdutos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('relevantes');
+  const [priceFilter, setPriceFilter] = useState('todos');
+  const [typeFilter, setTypeFilter] = useState('todos');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('todos');
+  const [adminOrderStatusFilter, setAdminOrderStatusFilter] = useState('todos');
+  const [paymentMethod, setPaymentMethod] = useState('PIX');
   const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [productsMessage, setProductsMessage] = useState(null);
   const [productForm, setProductForm] = useState(initialProductForm);
@@ -328,7 +339,27 @@ function App() {
         )
       : produtosCatalogo;
 
-    return [...filteredProducts].sort((firstProduct, secondProduct) => {
+    const filteredByType = typeFilter === 'todos'
+      ? filteredProducts
+      : filteredProducts.filter((produto) => produto.tipo === typeFilter);
+
+    const filteredByPrice = filteredByType.filter((produto) => {
+      if (priceFilter === 'ate-25') {
+        return produto.precoValor <= 25;
+      }
+
+      if (priceFilter === '25-50') {
+        return produto.precoValor > 25 && produto.precoValor <= 50;
+      }
+
+      if (priceFilter === 'acima-50') {
+        return produto.precoValor > 50;
+      }
+
+      return true;
+    });
+
+    return [...filteredByPrice].sort((firstProduct, secondProduct) => {
       if (sortOption === 'menor-preco') {
         return firstProduct.precoValor - secondProduct.precoValor;
       }
@@ -343,7 +374,7 @@ function App() {
 
       return 0;
     });
-  }, [produtosCatalogo, searchTerm, sortOption]);
+  }, [priceFilter, produtosCatalogo, searchTerm, sortOption, typeFilter]);
 
   const coverPreviewUrl = useMemo(
     () => (productFiles.imagemCapa ? URL.createObjectURL(productFiles.imagemCapa) : ''),
@@ -472,6 +503,11 @@ function App() {
   function updatePerfilField(event) {
     const { name, value } = event.target;
     setPerfilForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function updatePerfilSenhaField(event) {
+    const { name, value } = event.target;
+    setPerfilSenhaForm((current) => ({ ...current, [name]: value }));
   }
 
   function updateProductField(event) {
@@ -796,6 +832,7 @@ function App() {
     localStorage.removeItem('ivoneideToken');
     setUsuarioLogado(null);
     setPerfilForm(null);
+    setPerfilSenhaForm(initialProfilePasswordForm);
     setToken('');
     setMessage(null);
     setPageMessage(null);
@@ -807,12 +844,15 @@ function App() {
     setDownloadsByOrderId({});
     setActivePage('produtos');
     setIsQuickSummaryOpen(false);
+    setOrderStatusFilter('todos');
+    setAdminOrderStatusFilter('todos');
   }
 
   function handleExpiredSession() {
     localStorage.removeItem('ivoneideToken');
     setUsuarioLogado(null);
     setPerfilForm(null);
+    setPerfilSenhaForm(initialProfilePasswordForm);
     setToken('');
     setPedidoItens([]);
     setPedidoCriadoEm(null);
@@ -824,6 +864,8 @@ function App() {
     setProductFiles(initialProductFiles);
     setActiveTab('login');
     setActivePage('produtos');
+    setOrderStatusFilter('todos');
+    setAdminOrderStatusFilter('todos');
     setMessage({
       type: 'error',
       text: 'Sua sessao expirou ou o token nao foi aceito. Faca login novamente como administrador.',
@@ -891,6 +933,13 @@ function App() {
       return;
     }
 
+    const authToken = normalizeToken(token || localStorage.getItem('ivoneideToken'));
+
+    if (!authToken) {
+      handleExpiredSession();
+      return;
+    }
+
     setIsFinalizing(true);
     setPageMessage(null);
 
@@ -902,16 +951,21 @@ function App() {
     };
 
     try {
-      const order = await criarPedido(token, payload);
+      const order = await criarPedido(authToken, payload);
       setPedidos((current) => [order, ...current]);
       setExpandedOrderId(order.id);
       limparCarrinho();
       setActivePage('pedidos');
       setPageMessage({
         type: 'success',
-        text: 'Pedido criado com sucesso no backend.',
+        text: `Pedido criado com ${paymentMethod}. Agora ele aguarda confirmacao de pagamento.`,
       });
     } catch (error) {
+      if (error.status === 401) {
+        handleExpiredSession();
+        return;
+      }
+
       setPageMessage({
         type: 'error',
         text: `${error.message} Verifique se os produtos ainda existem e estao ativos no backend.`,
@@ -999,8 +1053,21 @@ function App() {
       return;
     }
 
+    const wantsPasswordChange = perfilSenhaForm.senhaAtual || perfilSenhaForm.novaSenha;
+
+    if (wantsPasswordChange && (!perfilSenhaForm.senhaAtual || !perfilSenhaForm.novaSenha)) {
+      setPageMessage({
+        type: 'error',
+        text: 'Para trocar a senha, informe a senha atual e a nova senha.',
+      });
+      return;
+    }
+
     try {
-      const data = await atualizarMeuPerfil(authToken, perfilForm);
+      const data = await atualizarMeuPerfil(authToken, {
+        ...perfilForm,
+        ...(wantsPasswordChange ? perfilSenhaForm : {}),
+      });
       const nextToken = normalizeToken(data.token);
       const updatedUser = {
         id: data.usuarioId,
@@ -1013,17 +1080,22 @@ function App() {
       setToken(nextToken);
       setUsuarioLogado(updatedUser);
       setPerfilForm({ nome: updatedUser.nome, email: updatedUser.email });
+      setPerfilSenhaForm(initialProfilePasswordForm);
       setPageMessage({
         type: 'success',
-        text: 'Perfil atualizado com sucesso.',
+        text: wantsPasswordChange
+          ? 'Perfil e senha atualizados com sucesso.'
+          : 'Perfil atualizado com sucesso.',
       });
     } catch (error) {
       if (error.status === 401) {
-        handleExpiredSession();
-        return;
+        setPageMessage({
+          type: 'error',
+          text: 'Senha atual incorreta. Confira a senha e tente novamente.',
+        });
+      } else {
+        setPageMessage({ type: 'error', text: error.message });
       }
-
-      setPageMessage({ type: 'error', text: error.message });
     }
   }
 
@@ -1053,6 +1125,44 @@ function App() {
               <List size={20} aria-hidden="true" />
             </button>
           </div>
+        </div>
+
+        <div className="filter-bar" aria-label="Filtros do catalogo">
+          <label>
+            Tipo
+            <select
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value)}
+            >
+              <option value="todos">Todos</option>
+              <option value="APOSTILA">Apostilas</option>
+              <option value="CURSO">Cursos</option>
+            </select>
+          </label>
+          <label>
+            Preco
+            <select
+              value={priceFilter}
+              onChange={(event) => setPriceFilter(event.target.value)}
+            >
+              <option value="todos">Todos os precos</option>
+              <option value="ate-25">Ate R$ 25,00</option>
+              <option value="25-50">R$ 25,01 ate R$ 50,00</option>
+              <option value="acima-50">Acima de R$ 50,00</option>
+            </select>
+          </label>
+          <button
+            className="outline-button"
+            type="button"
+            onClick={() => {
+              setSearchTerm('');
+              setSortOption('relevantes');
+              setTypeFilter('todos');
+              setPriceFilter('todos');
+            }}
+          >
+            Limpar filtros
+          </button>
         </div>
 
         {pageMessage && (
@@ -1182,7 +1292,9 @@ function App() {
             <h2>Carrinho de compras</h2>
             <p>Revise seus itens antes de finalizar o pedido.</p>
           </div>
-          <span className="status-pill">{pedidoItens.length ? 'CRIADO' : 'VAZIO'}</span>
+          <span className="status-pill">
+            {pedidoItens.length ? 'AGUARDANDO PAGAMENTO' : 'VAZIO'}
+          </span>
         </div>
 
         {pageMessage && (
@@ -1226,8 +1338,29 @@ function App() {
 
             <aside className="checkout-panel">
               <div>
-                <strong>Pedido em montagem</strong>
-                <p>Iniciado em {formatDate(pedidoCriadoEm)}</p>
+                <strong>Finalizacao da compra</strong>
+                <p>Pedido iniciado em {formatDate(pedidoCriadoEm)}</p>
+              </div>
+              <div className="summary-divider" />
+              <div className="checkout-customer">
+                <span>Comprador</span>
+                <strong>{usuarioLogado.nome}</strong>
+                <p>{usuarioLogado.email}</p>
+              </div>
+              <div className="checkout-methods">
+                <span>Forma de pagamento</span>
+                <div>
+                  {['PIX', 'CARTAO', 'BOLETO'].map((method) => (
+                    <button
+                      className={paymentMethod === method ? 'method-button method-button--active' : 'method-button'}
+                      type="button"
+                      key={method}
+                      onClick={() => setPaymentMethod(method)}
+                    >
+                      {method === 'CARTAO' ? 'Cartao' : method.charAt(0) + method.slice(1).toLowerCase()}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="summary-divider" />
               <div className="summary-totals">
@@ -1251,8 +1384,8 @@ function App() {
               <div className="payment-approved payment-approved--pending">
                 <CheckCircle2 size={32} aria-hidden="true" />
                 <div>
-                  <strong>Status atual: CRIADO</strong>
-                  <p>O pedido sera enviado para o backend ao finalizar.</p>
+                  <strong>Status atual: Aguardando pagamento</strong>
+                  <p>O pedido sera salvo no backend e ficara aguardando confirmacao.</p>
                 </div>
               </div>
               <button
@@ -1322,16 +1455,9 @@ function App() {
   }
 
   function renderPedidos() {
-    const totalPedidos = pedidos.length;
-    const totalGasto = pedidos.reduce(
-      (total, pedido) => total + Number(pedido.valorTotal ?? 0),
-      0,
-    );
-    const totalApostilas = pedidos.reduce(
-      (total, pedido) =>
-        total + (pedido.itens?.reduce((itemTotal, item) => itemTotal + item.quantidade, 0) ?? 0),
-      0,
-    );
+    const pedidosFiltrados = orderStatusFilter === 'todos'
+      ? pedidos
+      : pedidos.filter((pedido) => pedido.status === orderStatusFilter);
 
     return (
       <section className="store-content page-card" aria-label="Meus pedidos">
@@ -1340,28 +1466,24 @@ function App() {
             <h2>Meus pedidos</h2>
             <p>Acompanhe pedidos criados, pagos, cancelados ou expirados.</p>
           </div>
+          <select
+            className="status-filter"
+            aria-label="Filtrar pedidos por status"
+            value={orderStatusFilter}
+            onChange={(event) => setOrderStatusFilter(event.target.value)}
+          >
+            <option value="todos">Todos os status</option>
+            <option value="CRIADO">Criados</option>
+            <option value="AGUARDANDO_PAGAMENTO">Aguardando pagamento</option>
+            <option value="PAGO">Pagos</option>
+            <option value="CANCELADO">Cancelados</option>
+            <option value="EXPIRADO">Expirados</option>
+          </select>
         </div>
 
         {pageMessage && (
           <div className={`feedback feedback--${pageMessage.type}`}>
             {pageMessage.text}
-          </div>
-        )}
-
-        {!isOrdersLoading && pedidos.length > 0 && (
-          <div className="orders-overview">
-            <article>
-              <span>Pedidos</span>
-              <strong>{totalPedidos}</strong>
-            </article>
-            <article>
-              <span>Apostilas</span>
-              <strong>{totalApostilas}</strong>
-            </article>
-            <article>
-              <span>Total em pedidos</span>
-              <strong>{formatCurrency(totalGasto)}</strong>
-            </article>
           </div>
         )}
 
@@ -1377,9 +1499,15 @@ function App() {
             <strong>Nenhum pedido encontrado</strong>
             <p>Finalize uma compra pelo carrinho para o pedido aparecer aqui.</p>
           </div>
+        ) : pedidosFiltrados.length === 0 ? (
+          <div className="empty-page compact-empty">
+            <ClipboardList size={42} aria-hidden="true" />
+            <strong>Nenhum pedido nesse status</strong>
+            <p>Troque o filtro para ver outros pedidos.</p>
+          </div>
         ) : (
           <div className="orders-list">
-            {pedidos.map((pedido) => {
+            {pedidosFiltrados.map((pedido) => {
               const isExpanded = expandedOrderId === pedido.id;
               const totalPedidoItens = pedido.itens?.reduce(
                 (total, item) => total + item.quantidade,
@@ -1574,6 +1702,9 @@ function App() {
       0,
     );
     const pedidosPagos = adminOrders.filter((pedido) => pedido.status === 'PAGO').length;
+    const pedidosAdminFiltrados = adminOrderStatusFilter === 'todos'
+      ? adminOrders
+      : adminOrders.filter((pedido) => pedido.status === adminOrderStatusFilter);
 
     return (
       <section className="store-content page-card" aria-label="Administrar pedidos">
@@ -1582,7 +1713,22 @@ function App() {
             <h2>Admin pedidos</h2>
             <p>Acompanhe clientes, itens, valores e status dos pedidos.</p>
           </div>
-          <span className="status-pill">ADMIN</span>
+          <div className="admin-title-actions">
+            <select
+              className="status-filter"
+              aria-label="Filtrar pedidos admin por status"
+              value={adminOrderStatusFilter}
+              onChange={(event) => setAdminOrderStatusFilter(event.target.value)}
+            >
+              <option value="todos">Todos os status</option>
+              <option value="CRIADO">Criados</option>
+              <option value="AGUARDANDO_PAGAMENTO">Aguardando pagamento</option>
+              <option value="PAGO">Pagos</option>
+              <option value="CANCELADO">Cancelados</option>
+              <option value="EXPIRADO">Expirados</option>
+            </select>
+            <span className="status-pill">ADMIN</span>
+          </div>
         </div>
 
         {pageMessage && (
@@ -1620,9 +1766,15 @@ function App() {
             <strong>Nenhum pedido encontrado</strong>
             <p>Os pedidos dos clientes aparecerao aqui.</p>
           </div>
+        ) : pedidosAdminFiltrados.length === 0 ? (
+          <div className="empty-page compact-empty">
+            <ClipboardList size={42} aria-hidden="true" />
+            <strong>Nenhum pedido nesse status</strong>
+            <p>Troque o filtro para acompanhar outros pedidos.</p>
+          </div>
         ) : (
           <div className="admin-orders-list">
-            {adminOrders.map((pedido) => {
+            {pedidosAdminFiltrados.map((pedido) => {
               const statusInfo = getOrderStatusInfo(pedido.status);
               const totalPedidoItens = pedido.itens?.reduce(
                 (total, item) => total + item.quantidade,
@@ -1711,26 +1863,56 @@ function App() {
           </div>
 
           <form className="profile-form" onSubmit={salvarPerfil}>
-            <label>
-              Nome
-              <input
-                name="nome"
-                type="text"
-                value={perfilForm.nome}
-                onChange={updatePerfilField}
-                required
-              />
-            </label>
-            <label>
-              E-mail
-              <input
-                name="email"
-                type="email"
-                value={perfilForm.email}
-                onChange={updatePerfilField}
-                required
-              />
-            </label>
+            <div className="profile-form-section">
+              <strong>Dados pessoais</strong>
+              <label>
+                Nome
+                <input
+                  name="nome"
+                  type="text"
+                  value={perfilForm.nome}
+                  onChange={updatePerfilField}
+                  required
+                />
+              </label>
+              <label>
+                E-mail
+                <input
+                  name="email"
+                  type="email"
+                  value={perfilForm.email}
+                  onChange={updatePerfilField}
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="profile-form-section">
+              <strong>Trocar senha</strong>
+              <label>
+                Senha atual
+                <input
+                  name="senhaAtual"
+                  type="password"
+                  value={perfilSenhaForm.senhaAtual}
+                  onChange={updatePerfilSenhaField}
+                  placeholder="Digite sua senha atual"
+                  minLength="8"
+                />
+              </label>
+              <label>
+                Nova senha
+                <input
+                  name="novaSenha"
+                  type="password"
+                  value={perfilSenhaForm.novaSenha}
+                  onChange={updatePerfilSenhaField}
+                  placeholder="Minimo 8 caracteres"
+                  minLength="8"
+                />
+              </label>
+            </div>
+
             <button className="primary-button inline-button" type="submit">
               Salvar alteracoes
             </button>
@@ -2307,7 +2489,7 @@ function App() {
                   <strong>Pedido em montagem</strong>
                   <p>Iniciado em {formatDate(pedidoCriadoEm)}</p>
                 </div>
-                <span className="status-pill">CRIADO</span>
+                <span className="status-pill">AGUARDANDO</span>
               </div>
 
               <div className="summary-divider" />

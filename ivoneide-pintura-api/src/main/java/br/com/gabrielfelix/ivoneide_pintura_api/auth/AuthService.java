@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,16 +23,22 @@ public class AuthService {
 
 	private final UserRepository userRepository;
 	private final PasswordResetCodeRepository passwordResetCodeRepository;
+	private final PasswordRecoveryEmailService passwordRecoveryEmailService;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
+	private final boolean exposeRecoveryCode;
 	private final SecureRandom secureRandom = new SecureRandom();
 
 	public AuthService(UserRepository userRepository, PasswordResetCodeRepository passwordResetCodeRepository,
-			PasswordEncoder passwordEncoder, JwtService jwtService) {
+			PasswordRecoveryEmailService passwordRecoveryEmailService, PasswordEncoder passwordEncoder,
+			JwtService jwtService,
+			@Value("${app.password-recovery.expose-code}") boolean exposeRecoveryCode) {
 		this.userRepository = userRepository;
 		this.passwordResetCodeRepository = passwordResetCodeRepository;
+		this.passwordRecoveryEmailService = passwordRecoveryEmailService;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
+		this.exposeRecoveryCode = exposeRecoveryCode;
 	}
 
 	@Transactional(readOnly = true)
@@ -67,8 +74,13 @@ public class AuthService {
 				passwordEncoder.encode(code),
 				LocalDateTime.now().plusMinutes(15));
 		passwordResetCodeRepository.save(passwordResetCode);
+		boolean emailSent = passwordRecoveryEmailService.sendRecoveryCode(email, code);
 
-		return new PasswordRecoveryResponse("Codigo de recuperacao gerado com sucesso.", code);
+		String message = emailSent
+				? "Enviamos um codigo de recuperacao para o seu e-mail."
+				: "Codigo de recuperacao gerado com sucesso.";
+
+		return new PasswordRecoveryResponse(message, exposeRecoveryCode ? code : null);
 	}
 
 	@Transactional
