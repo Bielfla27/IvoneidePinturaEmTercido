@@ -171,6 +171,37 @@ function formatDate(value) {
   }).format(value);
 }
 
+function getOrderStatusInfo(status) {
+  const statusMap = {
+    CRIADO: {
+      label: 'Criado',
+      className: 'status-pill status-pill--created',
+      description: 'Aguardando confirmacao de pagamento.',
+    },
+    PAGO: {
+      label: 'Pago',
+      className: 'status-pill status-pill--paid',
+      description: 'Pagamento confirmado. Downloads liberados.',
+    },
+    CANCELADO: {
+      label: 'Cancelado',
+      className: 'status-pill status-pill--canceled',
+      description: 'Pedido cancelado.',
+    },
+    EXPIRADO: {
+      label: 'Expirado',
+      className: 'status-pill status-pill--expired',
+      description: 'Prazo de pagamento expirado.',
+    },
+  };
+
+  return statusMap[status] ?? {
+    label: status,
+    className: 'status-pill',
+    description: 'Status do pedido.',
+  };
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('login');
   const [activePage, setActivePage] = useState('produtos');
@@ -950,6 +981,17 @@ function App() {
   }
 
   function renderPedidos() {
+    const totalPedidos = pedidos.length;
+    const totalGasto = pedidos.reduce(
+      (total, pedido) => total + Number(pedido.valorTotal ?? 0),
+      0,
+    );
+    const totalApostilas = pedidos.reduce(
+      (total, pedido) =>
+        total + (pedido.itens?.reduce((itemTotal, item) => itemTotal + item.quantidade, 0) ?? 0),
+      0,
+    );
+
     return (
       <section className="store-content page-card" aria-label="Meus pedidos">
         <div className="store-title">
@@ -962,6 +1004,23 @@ function App() {
         {pageMessage && (
           <div className={`feedback feedback--${pageMessage.type}`}>
             {pageMessage.text}
+          </div>
+        )}
+
+        {!isOrdersLoading && pedidos.length > 0 && (
+          <div className="orders-overview">
+            <article>
+              <span>Pedidos</span>
+              <strong>{totalPedidos}</strong>
+            </article>
+            <article>
+              <span>Apostilas</span>
+              <strong>{totalApostilas}</strong>
+            </article>
+            <article>
+              <span>Total em pedidos</span>
+              <strong>{formatCurrency(totalGasto)}</strong>
+            </article>
           </div>
         )}
 
@@ -985,6 +1044,7 @@ function App() {
                 (total, item) => total + item.quantidade,
                 0,
               ) ?? 0;
+              const statusInfo = getOrderStatusInfo(pedido.status);
 
               return (
                 <article className="order-card order-card--details" key={pedido.id}>
@@ -994,15 +1054,22 @@ function App() {
                     onClick={() => setExpandedOrderId(isExpanded ? null : pedido.id)}
                     aria-expanded={isExpanded}
                   >
-                    <div>
-                      <strong>Pedido #{pedido.id}</strong>
-                      <p>
-                        Criado em {formatDate(new Date(pedido.criadoEm))} - {totalPedidoItens}{' '}
-                        {totalPedidoItens === 1 ? 'item' : 'itens'}
-                      </p>
+                    <div className="order-card__main">
+                      <span className="order-number">Pedido #{pedido.id}</span>
+                      <strong>{formatCurrency(Number(pedido.valorTotal))}</strong>
+                      <p>{statusInfo.description}</p>
                     </div>
-                    <span className="status-pill">{pedido.status}</span>
-                    <strong>{formatCurrency(Number(pedido.valorTotal))}</strong>
+                    <div className="order-card__meta">
+                      <span>Criado em</span>
+                      <strong>{formatDate(new Date(pedido.criadoEm))}</strong>
+                    </div>
+                    <div className="order-card__meta">
+                      <span>Itens</span>
+                      <strong>
+                        {totalPedidoItens} {totalPedidoItens === 1 ? 'item' : 'itens'}
+                      </strong>
+                    </div>
+                    <span className={statusInfo.className}>{statusInfo.label}</span>
                     <span className="order-card__toggle">
                       {isExpanded ? 'Fechar detalhes' : 'Ver detalhes'}
                     </span>
@@ -1010,7 +1077,13 @@ function App() {
 
                   {isExpanded && (
                     <div className="order-details">
-                      <strong className="summary-section-title">Itens do pedido</strong>
+                      <div className="order-details__top">
+                        <div>
+                          <strong>Itens do pedido</strong>
+                          <p>Confira as apostilas, quantidades e valores deste pedido.</p>
+                        </div>
+                        <span className={statusInfo.className}>{statusInfo.label}</span>
+                      </div>
                       <div className="order-items-list">
                         {pedido.itens?.map((item) => (
                           <div className="order-item-row" key={item.id ?? item.produtoId}>
@@ -1034,8 +1107,18 @@ function App() {
                       </div>
 
                       <div className="order-details__footer">
-                        <span>Total do pedido</span>
-                        <strong>{formatCurrency(Number(pedido.valorTotal))}</strong>
+                        <div>
+                          <span>Subtotal</span>
+                          <strong>{formatCurrency(Number(pedido.valorTotal))}</strong>
+                        </div>
+                        <div>
+                          <span>Desconto</span>
+                          <strong>- {formatCurrency(0)}</strong>
+                        </div>
+                        <div className="order-details__total">
+                          <span>Total do pedido</span>
+                          <strong>{formatCurrency(Number(pedido.valorTotal))}</strong>
+                        </div>
                       </div>
                     </div>
                   )}

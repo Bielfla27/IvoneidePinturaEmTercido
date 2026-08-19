@@ -211,6 +211,7 @@ h1 {
 .status-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   height: 28px;
   padding: 0 10px;
   border-radius: 999px;
@@ -218,6 +219,26 @@ h1 {
   color: #28613d;
   font-size: 0.75rem;
   font-weight: 800;
+}
+
+.status-pill--paid {
+  background: #e7f7ec;
+  color: #176435;
+}
+
+.status-pill--created {
+  background: #eef6ed;
+  color: #2f793b;
+}
+
+.status-pill--canceled {
+  background: #fff0f0;
+  color: #b42335;
+}
+
+.status-pill--expired {
+  background: #fff7df;
+  color: #8a5a00;
 }
 
 .ghost-button {
@@ -1363,6 +1384,35 @@ h1 {
   gap: 14px;
 }
 
+.orders-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.orders-overview article {
+  display: grid;
+  gap: 6px;
+  min-height: 92px;
+  padding: 18px;
+  border: 1px solid #e7e3dd;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(48, 59, 44, 0.05);
+}
+
+.orders-overview span {
+  color: #71806e;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.orders-overview strong {
+  color: #0f6b39;
+  font-size: 1.45rem;
+}
+
 .cart-line-item,
 .order-card,
 .checkout-panel,
@@ -1425,7 +1475,7 @@ h1 {
 
 .order-card__header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, auto) minmax(90px, auto) auto auto;
   gap: 16px;
   align-items: center;
   width: 100%;
@@ -1438,6 +1488,38 @@ h1 {
 
 .order-card__header:hover {
   background: #fbfdf8;
+}
+
+.order-card__main,
+.order-card__meta {
+  display: grid;
+  gap: 5px;
+}
+
+.order-card__main strong {
+  color: #0f6b39;
+  font-size: 1.2rem;
+}
+
+.order-card__main p {
+  margin: 0;
+}
+
+.order-number {
+  color: #213020;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.order-card__meta span {
+  color: #71806e;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.order-card__meta strong {
+  color: #213020;
+  font-size: 0.9rem;
 }
 
 .order-card__toggle {
@@ -1461,8 +1543,22 @@ h1 {
   background: #fff;
 }
 
-.order-details .summary-section-title {
-  margin: 16px 0 0;
+.order-details__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.order-details__top strong {
+  color: #213020;
+  font-size: 1rem;
+}
+
+.order-details__top p {
+  margin: 5px 0 0;
+  color: #71806e;
 }
 
 .order-items-list {
@@ -1517,18 +1613,35 @@ h1 {
 }
 
 .order-details__footer {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
   justify-content: flex-end;
   gap: 18px;
-  padding-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid #e7e3dd;
   color: #71806e;
   font-weight: 800;
+}
+
+.order-details__footer div {
+  display: grid;
+  gap: 4px;
+  min-width: 128px;
+  text-align: right;
+}
+
+.order-details__footer span {
+  color: #71806e;
+  font-size: 0.82rem;
 }
 
 .order-details__footer strong {
   color: #0f6b39;
   font-size: 1.08rem;
+}
+
+.order-details__total strong {
+  font-size: 1.22rem;
 }
 
 .profile-grid {
@@ -2055,6 +2168,10 @@ h1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .orders-overview {
+    grid-template-columns: 1fr;
+  }
+
   .admin-products-layout {
     grid-template-columns: 1fr;
   }
@@ -2081,6 +2198,16 @@ h1 {
 
   .order-item-row__values {
     min-width: 0;
+  }
+
+  .order-details__footer {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .order-details__footer div {
+    min-width: 0;
+    text-align: left;
   }
 
   .preview-pages-grid {
